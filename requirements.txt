@@ -29,3 +29,5 @@ werkzeug==2.0.2
 itsdangerous==2.0.1
 m3u8
 pycryptodomex
+flask>=2.0.0
+requests>=2.26.0
