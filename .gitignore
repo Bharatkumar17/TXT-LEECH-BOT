@@ -7,7 +7,7 @@ __pycache__/
 build/
 develop-eggs/
 dist/
-downloads/  # Bot downloads directory
+downloads/
 eggs/
 .eggs/
 lib/
@@ -25,66 +25,66 @@ venv/
 ENV/
 env/
 pythonenv/
-virtualenv/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
-*.code-workspace
-*.iml
+*.sublime-workspace
+*.sublime-project
 
 # Logs
 *.log
-logs/  # Bot logs directory
+logs/
+*.log.*
+logfile.*
 
 # Local development settings
 .env
 .env.local
-.env.*.local
-.env.development.local
-.env.production.local
-.env.test.local
+.env.development
+.env.test
+.env.production
 
 # Downloaded files
-downloads/  # Already included above
+downloads/
 *.mp4
 *.mkv
 *.avi
 *.mov
-*.ts
+*.pdf
+*.mp3
+*.m4a
+*.webm
 *.m3u8
-*.part
-*.ytdl
 
 # Temporary files
 *.tmp
+temp/
+tmp/
 *.temp
 *.cache
-*.pid
-*.lock
 
 # System files
 .DS_Store
 Thumbs.db
-
-# Bot-specific
-thumb_*.jpg
-*.session
-*.session-journal
-config.ini
 
 # Database files
 *.db
 *.sqlite
 *.sqlite3
 
-# Encryption keys
-*.key
-*.pem
+# Session files
+*.session
+*.session-journal
 
-# Compression files
-*.zip
-*.tar
-*.gz
+# Config files
+config.py
+
+# Thumbnail files
+thumb.jpg
+*.jpg
+*.jpeg
+*.png
+*.gif
