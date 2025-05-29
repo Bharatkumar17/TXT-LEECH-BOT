@@ -586,38 +586,23 @@ def handle_exception(loop, context):
     print(f"Caught exception: {msg}")
     asyncio.create_task(notify_admin(f"Bot Exception:\n\n{msg}"))
 
-def main():
-    loop = asyncio.get_event_loop()
-    
-    # Set up signal handlers
-    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
-        loop.add_signal_handler(
-            sig,
-            lambda s=sig: asyncio.create_task(shutdown(s, loop)))
-    
-    # Set up exception handler
-    loop.set_exception_handler(handle_exception)
-    
+async def main():
+    # Your bot initialization code
+    bot = YourBotClass()
     try:
-        print("Starting bot...")
-        bot.start_time = time.time()
-        loop.run_until_complete(bot.start())
-        print("Bot started successfully")
-        loop.run_forever()
+        await bot.start()  # Assuming start() is an async function
     except KeyboardInterrupt:
-        print("Received keyboard interrupt")
-    except Exception as e:
-        print(f"Fatal error: {str(e)}")
+        pass
     finally:
-        print("Cleaning up...")
-        loop.run_until_complete(bot.stop())
-        loop.close()
-        print("Bot stopped successfully")
+        if hasattr(bot, 'stop') and asyncio.iscoroutinefunction(bot.stop):
+            await bot.stop()
+        elif hasattr(bot, 'stop'):
+            bot.stop()  # For synchronous stop methods
 
 if __name__ == "__main__":
-    # Create necessary directories
-    os.makedirs("./downloads", exist_ok=True)
-    os.makedirs("./logs", exist_ok=True)
-    
-    # Start the bot
-    main()
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(main())
+    finally:
+        loop.close()
