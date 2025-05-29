@@ -1,8 +1,10 @@
-# Python
+# Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
+
+# Distribution / packaging
 .Python
 build/
 develop-eggs/
@@ -20,21 +22,63 @@ wheels/
 .installed.cfg
 *.egg
 
-# Virtual Environment
+# PyInstaller
+#  Usually these files are written by a python script from a template
+#  before PyInstaller builds the exe, so as to inject date/other infos into it.
+*.manifest
+*.spec
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Environments
 venv/
 ENV/
+env/
+.benv/
+venv*/
 
 # IDE
 .idea/
 .vscode/
 *.swp
 *.swo
+*.sublime-*
+*.code-workspace
 
 # Logs
 *.log
+logs/
+log/
 
 # Local development settings
 .env
+.env.local
+.env.*.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # Downloaded files
 downloads/
@@ -42,6 +86,55 @@ downloads/
 *.mkv
 *.avi
 *.mov
+*.pdf
+*.jpg
+*.jpeg
+*.png
+*.m3u8
 
 # Temporary files
 *.tmp
+*.temp
+~$*
+Thumbs.db
+.DS_Store
+
+# Bot-specific files
+thumb_*.jpg
+session_*
+config.ini
+credentials.json
+
+# Encryption keys
+*.key
+*.iv
+
+# Helper files
+*.session
+*.session-journal
+
+# Cache files
+.cache/
+*.cache
+
+# System files
+desktop.ini
+
+# Compressed files
+*.zip
+*.gz
+*.tar
+*.tgz
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Media files
+*.webm
+*.flv
+*.wmv
+*.mpeg
+*.mpg
+*.m4v
