@@ -9,7 +9,7 @@ import requests
 from aiohttp import ClientSession
 from pyromod import listen
 from subprocess import getstatusoutput
-from pyrogram import Client, filters
+from pyrogram import Client, filters, idle
 from pyrogram.types import Message
 from pyrogram.errors import FloodWait
 from pyrogram.types import InlineKeyboardButton, InlineKeyboardMarkup
@@ -496,7 +496,10 @@ async def process_v2_downloads(message, links, start_index, quality, batch_name,
 async def stop_process(client, message):
     user_id = message.from_user.id
     try:
-        await cleanup(user_id)
+        # Cleanup specific user's downloads
+        if user_id in current_downloads:
+            del current_downloads[user_id]
+        os.system(f"pkill -u {user_id} yt-dlp")
         await message.reply_text("✅ **Your downloads have been stopped!**")
     except Exception as e:
         await message.reply_text(f"❌ Error stopping processes: {str(e)}")
@@ -556,20 +559,14 @@ async def stats_command(client, message):
     except Exception as e:
         await message.reply_text(f"❌ Stats error: {str(e)}")
 
-async def cleanup(user_id=None):
+async def cleanup():
     """Cleanup function to kill any running processes"""
     try:
-        if user_id:
-            # Cleanup specific user's downloads
-            if user_id in current_downloads:
-                del current_downloads[user_id]
-            os.system(f"pkill -u {user_id} yt-dlp")
-        else:
-            # Full cleanup
-            current_downloads.clear()
-            os.system("pkill -9 yt-dlp")
-            os.system("pkill -9 aria2c")
-            os.system("pkill -9 ffmpeg")
+        # Full cleanup
+        current_downloads.clear()
+        os.system("pkill -9 yt-dlp")
+        os.system("pkill -9 aria2c")
+        os.system("pkill -9 ffmpeg")
     except Exception as e:
         print(f"Cleanup error: {str(e)}")
 
@@ -596,7 +593,13 @@ def handle_exception(loop, context):
     print(f"Caught exception: {msg}")
     asyncio.create_task(notify_admin(f"Bot Exception:\n\n{msg}"))
 
-def main():
+async def run_bot():
+    """Run the bot and handle shutdown signals"""
+    # Create necessary directories
+    os.makedirs("./downloads", exist_ok=True)
+    os.makedirs("./logs", exist_ok=True)
+    
+    # Create event loop
     loop = asyncio.get_event_loop()
     
     # Set up signal handlers
@@ -611,23 +614,18 @@ def main():
     try:
         print("Starting bot...")
         bot.start_time = time.time()
-        loop.run_until_complete(bot.start())
+        await bot.start()
         print("Bot started successfully")
-        loop.run_forever()
+        await idle()
     except KeyboardInterrupt:
         print("Received keyboard interrupt")
     except Exception as e:
         print(f"Fatal error: {str(e)}")
     finally:
         print("Cleaning up...")
-        loop.run_until_complete(bot.stop())
-        loop.close()
+        await bot.stop()
         print("Bot stopped successfully")
 
 if __name__ == "__main__":
-    # Create necessary directories
-    os.makedirs("./downloads", exist_ok=True)
-    os.makedirs("./logs", exist_ok=True)
-    
     # Start the bot
-    main()
+    asyncio.run(run_bot())
