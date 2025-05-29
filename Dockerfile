@@ -8,13 +8,37 @@ RUN apt-get update && apt-get upgrade -y \
     musl-dev \
     ffmpeg \
     aria2 \
-    python3-pip \
-    && apt-get clean \
+    wget \
+    && apt-get autoremove -y \
+    && apt-get clean -y \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . /app/
-WORKDIR /app/
+# Set work directory
+WORKDIR /app
 
-RUN pip3 install --no-cache-dir --upgrade --requirement requirements.txt
+# Install Python dependencies first to leverage Docker cache
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
 
-CMD python3 main.py
+# Copy application
+COPY . .
+
+# Create necessary directories for bot operation
+RUN mkdir -p ./downloads ./logs \
+    && chmod 777 ./downloads ./logs
+
+# Install yt-dlp for video downloading
+RUN pip install --no-cache-dir yt-dlp
+
+# Set environment variables for better performance
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=on
+
+# Run as non-root user for security
+RUN useradd -m -d /app appuser && chown -R appuser:appuser /app
+USER appuser
+
+# Start the bot
+CMD ["python3", "main.py"]
