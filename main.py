@@ -79,7 +79,9 @@ async def download_m3u8(url, output_file, key_url=None):
         for segment in playlist.segments:
             segment_url = segment.uri
             if not segment_url.startswith('http'):
-                segment_url = os.path.dirname(url) + '/' + segment_url
+                # Handle relative URLs
+                base_url = url.rsplit('/', 1)[0]
+                segment_url = f"{base_url}/{segment_url}"
             
             segment_response = requests.get(segment_url)
             segment_data = segment_response.content
@@ -212,10 +214,10 @@ async def v2_download_command(client, message):
         if input_message.document:
             x = await input_message.download()
         else:
-            await message.reply_text("❌ Please send a text file")
+            await editable.edit("❌ Please send a text file")
             return
             
-        await input_message.delete(True)
+        await input_message.delete()
 
         path = f"./downloads/{message.chat.id}"
         os.makedirs(path, exist_ok=True)
@@ -233,9 +235,10 @@ async def v2_download_command(client, message):
                     links.append(i)
             os.remove(x)
             if not links:
-                raise Exception("No valid links found in file")
+                await editable.edit("❌ No valid links found in file")
+                return
         except Exception as e:
-            await message.reply_text(f"❌ **Invalid file input:** {str(e)}")
+            await editable.edit(f"❌ **Invalid file input:** {str(e)}")
             if os.path.exists(x):
                 os.remove(x)
             return
@@ -244,10 +247,12 @@ async def v2_download_command(client, message):
         try:
             input0 = await bot.listen(message.chat.id, timeout=60)
             raw_text = input0.text
-            await input0.delete(True)
+            await input0.delete()
             start_index = int(raw_text) if raw_text.isdigit() else 1
             if start_index < 1 or start_index > len(links):
-                raise ValueError("Invalid starting index")
+                await editable.edit("⚠️ Invalid starting index. Using default 1")
+                start_index = 1
+                await asyncio.sleep(2)
         except Exception as e:
             await editable.edit(f"⚠️ Using default starting index 1\nError: {str(e)}")
             start_index = 1
@@ -256,12 +261,12 @@ async def v2_download_command(client, message):
         await editable.edit("📛 **Enter batch name:**")
         input1 = await bot.listen(message.chat.id, timeout=60)
         batch_name = input1.text
-        await input1.delete(True)
+        await input1.delete()
 
         await editable.edit("🖼 **Select quality (144,240,360,480,720,1080):**")
         input2 = await bot.listen(message.chat.id, timeout=60)
         quality = input2.text
-        await input2.delete(True)
+        await input2.delete()
         
         resolution_map = {
             "144": "256x144",
@@ -276,12 +281,12 @@ async def v2_download_command(client, message):
         await editable.edit("📝 **Enter caption (or send 'no' for none):**")
         input3 = await bot.listen(message.chat.id, timeout=60)
         caption = input3.text if input3.text.lower() != 'no' else ""
-        await input3.delete(True)
+        await input3.delete()
 
         await editable.edit("🖼 **Send thumbnail URL (or 'no' for none):**")
         input6 = await bot.listen(message.chat.id, timeout=60)
         thumb_url = input6.text
-        await input6.delete(True)
+        await input6.delete()
         await editable.delete()
 
         # Download thumbnail if provided
@@ -289,10 +294,14 @@ async def v2_download_command(client, message):
         if thumb_url.lower() != 'no' and (thumb_url.startswith("http://") or thumb_url.startswith("https://")):
             try:
                 thumb_path = f"thumb_{message.chat.id}.jpg"
-                os.system(f"wget '{thumb_url}' -O '{thumb_path}'")
+                response = requests.get(thumb_url)
+                if response.status_code == 200:
+                    with open(thumb_path, 'wb') as f:
+                        f.write(response.content)
+                else:
+                    await message.reply_text(f"⚠️ Failed to download thumbnail: HTTP {response.status_code}")
             except Exception as e:
                 await message.reply_text(f"⚠️ Failed to download thumbnail: {str(e)}")
-                thumb_path = None
 
         # Initialize download status
         status = DownloadStatus(total=len(links), user_id=user_id)
@@ -316,7 +325,7 @@ async def v2_download_command(client, message):
             )
         )
         active_tasks.add(task)
-        task.add_done_callback(active_tasks.discard)
+        task.add_done_callback(lambda t: active_tasks.discard(t))
 
     except Exception as e:
         await message.reply_text(f"❌ **V2 Download Error:** {str(e)}")
@@ -428,14 +437,15 @@ async def process_v2_downloads(message, links, start_index, quality, batch_name,
                         status.completed += 1
                     except FloodWait as e:
                         await message.reply_text(f"⏳ Flood wait: {e.x} seconds")
-                        time.sleep(e.x)
+                        await asyncio.sleep(e.x)
                         continue
                     except Exception as e:
                         await message.reply_text(f"❌ Failed to send file: {str(e)}")
                         status.failed += 1
                     
                     # Clean up
-                    os.remove(output_file)
+                    if os.path.exists(output_file):
+                        os.remove(output_file)
                 else:
                     status.failed += 1
                     await message.reply_text(f"❌ Download failed for: {name}")
@@ -586,23 +596,38 @@ def handle_exception(loop, context):
     print(f"Caught exception: {msg}")
     asyncio.create_task(notify_admin(f"Bot Exception:\n\n{msg}"))
 
-async def main():
-    # Your bot initialization code
-    bot = YourBotClass()
+def main():
+    loop = asyncio.get_event_loop()
+    
+    # Set up signal handlers
+    for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGQUIT):
+        loop.add_signal_handler(
+            sig,
+            lambda s=sig: asyncio.create_task(shutdown(s, loop)))
+    
+    # Set up exception handler
+    loop.set_exception_handler(handle_exception)
+    
     try:
-        await bot.start()  # Assuming start() is an async function
+        print("Starting bot...")
+        bot.start_time = time.time()
+        loop.run_until_complete(bot.start())
+        print("Bot started successfully")
+        loop.run_forever()
     except KeyboardInterrupt:
-        pass
+        print("Received keyboard interrupt")
+    except Exception as e:
+        print(f"Fatal error: {str(e)}")
     finally:
-        if hasattr(bot, 'stop') and asyncio.iscoroutinefunction(bot.stop):
-            await bot.stop()
-        elif hasattr(bot, 'stop'):
-            bot.stop()  # For synchronous stop methods
+        print("Cleaning up...")
+        loop.run_until_complete(bot.stop())
+        loop.close()
+        print("Bot stopped successfully")
 
 if __name__ == "__main__":
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    try:
-        loop.run_until_complete(main())
-    finally:
-        loop.close()
+    # Create necessary directories
+    os.makedirs("./downloads", exist_ok=True)
+    os.makedirs("./logs", exist_ok=True)
+    
+    # Start the bot
+    main()
