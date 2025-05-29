@@ -1,25 +1,46 @@
 {
-    "name": "TXT-Leech-Bot",
-    "description": "Telegram bot to download videos from text files",
+    "name": "TXT-Leech-Bot-Pro",
+    "description": "Advanced Telegram bot for downloading videos from text files with Utkarsh Classes support",
     "keywords": [
         "telegram",
         "bot",
         "video",
-        "downloader"
+        "downloader",
+        "utkarsh",
+        "m3u8",
+        "stream"
     ],
     "repository": "https://github.com/20255-ee-085/TXT-LEECH-BOT",
     "env": {
         "BOT_TOKEN": {
             "description": "Your bot token from @BotFather",
-            "required": true
+            "required": true,
+            "value": ""
         },
         "API_ID": {
             "description": "Your API_ID from my.telegram.org",
-            "required": true
+            "required": true,
+            "value": ""
         },
         "API_HASH": {
             "description": "Your API_HASH from my.telegram.org",
-            "required": true
+            "required": true,
+            "value": ""
+        },
+        "OWNER_ID": {
+            "description": "Your Telegram user ID for admin access",
+            "required": false,
+            "value": ""
+        },
+        "MAX_CONCURRENT_DOWNLOADS": {
+            "description": "Maximum parallel downloads (recommended 3-5)",
+            "required": false,
+            "value": "3"
+        },
+        "DOWNLOAD_DIR": {
+            "description": "Directory to store downloads",
+            "required": false,
+            "value": "downloads"
         }
     },
     "buildpacks": [
@@ -28,13 +49,27 @@
         },
         {
             "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+        },
+        {
+            "url": "https://github.com/amivin/aria2-heroku.git"
         }
     ],
     "formation": {
         "worker": {
             "quantity": 1,
-            "size": "basic"
+            "size": "standard-1x"
         }
     },
-    "stack": "heroku-22"
+    "stack": "heroku-22",
+    "addons": [
+        {
+            "plan": "heroku-postgresql:hobby-dev",
+            "options": {
+                "version": "14"
+            }
+        }
+    ],
+    "scripts": {
+        "postdeploy": "python3 setup.py"
+    }
 }
