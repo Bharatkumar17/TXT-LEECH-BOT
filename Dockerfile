@@ -1,44 +1,49 @@
 FROM python:3.10.8-slim-buster
 
-# Install system dependencies including ffmpeg
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+ENV PIP_NO_CACHE_DIR 1
+
+# Install system dependencies including ffmpeg and other required tools
 RUN apt-get update && apt-get upgrade -y \
     && apt-get install -y --no-install-recommends \
     gcc \
+    g++ \
+    make \
     libffi-dev \
     musl-dev \
     ffmpeg \
     aria2 \
     wget \
-    && apt-get autoremove -y \
-    && apt-get clean -y \
+    curl \
+    gnupg \
+    python3-dev \
+    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Set work directory
+# Create and set working directory
 WORKDIR /app
 
-# Install Python dependencies first to leverage Docker cache
+# Copy requirements first to leverage Docker cache
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip \
+
+# Install Python dependencies
+RUN pip install --upgrade pip \
     && pip install --no-cache-dir -r requirements.txt
 
-# Copy application
+# Copy the rest of the application
 COPY . .
 
-# Create necessary directories for bot operation
-RUN mkdir -p ./downloads ./logs \
-    && chmod 777 ./downloads ./logs
+# Create downloads directory
+RUN mkdir -p downloads
 
-# Install yt-dlp for video downloading
-RUN pip install --no-cache-dir yt-dlp
+# Set proper permissions
+RUN chmod +x /app/main.py
 
-# Set environment variables for better performance
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=on
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
 
-# Run as non-root user for security
-RUN useradd -m -d /app appuser && chown -R appuser:appuser /app
-USER appuser
-
-# Start the bot
+# Run the application
 CMD ["python3", "main.py"]
